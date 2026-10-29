@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { translate } from '@/i18n/i18n'
 import { useUiLanguageRevision } from '@/i18n/use-ui-language-revision'
 import type { GitBranchCompareSummary } from '../../../../../../shared/git-diff-compare-types'
+import { UNBORN_BRANCH_HEAD_OID } from '../../../../../../shared/git-status-porcelain-parser'
 import { isStageableStatusEntry } from '../../../../../../shared/source-control-discard-all-sequence'
 import { resolveDropdownItems } from '../../source-control-dropdown-items'
 import { resolveCommitAreaPrimaryAction } from '../../source-control-primary-action'
@@ -38,7 +39,8 @@ export function useSourceControlActionModel({
   hostedReviewReviewLabel,
   hasSuppressedGitHubPRState,
   conflictOperation,
-  effectiveBaseRef
+  effectiveBaseRef,
+  gitStatusHead
 }: {
   grouped: SourceControlEntryGroups
   commitMessage: string
@@ -65,6 +67,7 @@ export function useSourceControlActionModel({
   hasSuppressedGitHubPRState: boolean
   conflictOperation: DropdownInput['conflictOperation']
   effectiveBaseRef: string | null
+  gitStatusHead: string | null
 }) {
   const languageRevision = useUiLanguageRevision()
   const createReviewEligibility = hasSuppressedGitHubPRState ? null : hostedReviewCreation
@@ -228,11 +231,9 @@ export function useSourceControlActionModel({
         branchCommitsAhead:
           branchSummary?.status === 'ready' ? (branchSummary.commitsAhead ?? 0) : undefined,
         hasCurrentBranch: Boolean(branchName),
-        // git commit --amend needs an existing HEAD; the summary reports unborn HEAD both explicitly and as ready with a null oid.
-        hasAmendableHead:
-          branchSummary !== null &&
-          branchSummary.status !== 'unborn-head' &&
-          !(branchSummary?.status === 'ready' && branchSummary.headOid === null),
+        // Porcelain reports `branch.oid (initial)` while HEAD is unborn, so the status head is an
+        // authoritative amend signal that never depends on a compare base being configured.
+        hasAmendableHead: gitStatusHead !== null && gitStatusHead !== UNBORN_BRANCH_HEAD_OID,
         canPushLinkedReviewWithoutUpstream: canUseHostedReviewPushTarget,
         rebaseBaseRef: effectiveBaseRef
       }),
@@ -255,7 +256,7 @@ export function useSourceControlActionModel({
       prGenerating,
       canUseHostedReviewPushTarget,
       branchSummary?.commitsAhead,
-      branchSummary?.headOid,
+      gitStatusHead,
       branchSummary?.status,
       branchName,
       effectiveBaseRef,
