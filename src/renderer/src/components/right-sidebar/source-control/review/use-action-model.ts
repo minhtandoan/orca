@@ -228,6 +228,10 @@ export function useSourceControlActionModel({
         branchCommitsAhead:
           branchSummary?.status === 'ready' ? (branchSummary.commitsAhead ?? 0) : undefined,
         hasCurrentBranch: Boolean(branchName),
+        // git commit --amend needs an existing HEAD; the summary reports unborn HEAD both explicitly and as ready with a null oid.
+        hasAmendableHead:
+          branchSummary?.status !== 'unborn-head' &&
+          !(branchSummary?.status === 'ready' && branchSummary.headOid === null),
         canPushLinkedReviewWithoutUpstream: canUseHostedReviewPushTarget,
         rebaseBaseRef: effectiveBaseRef
       }),
@@ -250,6 +254,7 @@ export function useSourceControlActionModel({
       prGenerating,
       canUseHostedReviewPushTarget,
       branchSummary?.commitsAhead,
+      branchSummary?.headOid,
       branchSummary?.status,
       branchName,
       effectiveBaseRef,
